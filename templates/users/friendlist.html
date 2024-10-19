@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<h3> Список друзей <a href="{% url 'users:user_profile' username=user.username %}">{{user.username}}</a></h3>
+
+
+{% for friend in friend_list %}
+    <p><a href="{% url 'users:user_profile' username=friend.username %}">{{ friend.username }}</a></p>
+    {% if user.username == request.user.username %}
+        <form action="{% url 'users:remove_friend' username=friend.username %}" method="post">
+            {% csrf_token %}
+            <button type="submit">Удалить из друзей</button>
+        </form>
+    {% endif %}
+    {%empty%}
+    <p>Пока тут пусто</p>
+{% endfor %}
+
+</body>
+</html>

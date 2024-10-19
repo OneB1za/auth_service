@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ user.username }}</title>
+</head>
+<body>
+
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="success">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if request.user.is_authenticated %}
+        <p>Моя страница - <a href="{% url 'users:user_profile' username=request.user.username %}">{{ request.user.username }}</a>,
+            <a href="{% url 'users:logout'%}">выйти</a></p>
+        <a href="{% url 'users:profile_settings'%}">Настройки профиля</a>
+    {% else %}
+        <p><a href="{% url 'users:login' %}">Авторизоваться</a></p>
+    {% endif %}
+
+    <h2>Профиль</h2>
+    <h3>{{ user.first_name}} {{user.last_name}}</h3>
+    {% if request.user.is_authenticated %}
+    {% if user.username != request.user.username %}
+        {% if not is_friend %}
+        <form method="post" action="{% url 'users:add_friend' %}">
+            {% csrf_token %}
+            <input type="hidden" name="friend_id" value="{{ user.id }}">
+            <button type="submit">Добавить в друзья</button>
+        </form>
+        {% else %}
+
+        <form action="{% url 'users:remove_friend' username=user.username %}" method="post">
+            {% csrf_token %}
+            <button type="submit">Удалить из друзей</button>
+        </form>
+        {%endif%}
+    {% else %}
+        {% if request.user.is_authenticated %}
+            <p><a href="{% url 'users:my_requested_friend' %}">Заявки в друзья</a></p>
+        {% endif %}
+    {%endif%}
+    {%endif%}
+
+    <h4><a href="{% url 'users:friendlist' username=user.username %}">Список друзей</a></h4>
+    {% for friend in friend_list|slice:":3" %}
+        <p><a href="{% url 'users:user_profile' username=friend.username %}">{{ friend.username }}</a></p>
+
+    {% endfor %}
+</body>
+</html>
