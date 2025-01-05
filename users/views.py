@@ -2,6 +2,7 @@ import logging
 
 from django.contrib.auth import login, authenticate, logout
 from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.views import View
@@ -174,6 +175,8 @@ class GetMyRequestedFriendsView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         return FriendShip.objects.filter(friend=self.request.user, status='requested')
+
+
 
 
 class FriendlistView(ListView):

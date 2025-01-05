@@ -63,4 +63,4 @@ class UserProfileSettingsForm(forms.ModelForm):
     class Meta:
         model = UserProfileSettings
         fields = ['invisible_friendlist']
-        labels = {'invisible_friendlist': 'Скрыть список друзей'}
+        labels = {'invisible_friendlist': 'Cписок друзей'}

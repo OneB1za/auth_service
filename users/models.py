@@ -116,7 +116,7 @@ class FriendShip(models.Model):
 class UserProfileSettings(models.Model):
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, unique=True, null=True, blank=True)
-    invisible_friendlist = models.BooleanField(default=False, help_text='Виден ли список ваших друзей', null=True, blank=True)
+    invisible_friendlist = models.BooleanField(default=False, help_text='Закрытый список ваших друзей')
 
     class Meta:
         verbose_name = 'Настройки профиля'
