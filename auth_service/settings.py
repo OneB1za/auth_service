@@ -9,8 +9,12 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-import os
+
 from pathlib import Path
+import hvac
+import os
+import threading
+import time
 from pythonjsonlogger.jsonlogger import JsonFormatter
 import pythonjsonlogger
 
@@ -112,6 +116,7 @@ LOGGING = {
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+# Для дэфолтной базы sqlite3
 '''
 DATABASES = {
     'default': {
@@ -120,6 +125,75 @@ DATABASES = {
     }
 }
 '''
+
+
+class VaultDBCredentials:
+    def __init__(self, vault_url, role_name, token):
+        self.client = hvac.Client(url=vault_url, token=token)
+        self.role_name = role_name
+        self.credentials = None
+        self.expiry_time = 0
+
+    def update_credentials(self):
+        # Запросить новые учетные данные
+        creds = self.client.secrets.database.generate_credentials(name=self.role_name)
+        self.credentials = {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'users',
+            'USER': creds['data']['username'],
+            'PASSWORD': creds['data']['password'],
+            'HOST': 'postgres',  # Имя PostgreSQL из docker-compose
+            'PORT': 5432,
+        }
+        # Сохранить время истечения
+        self.expiry_time = time.time() + creds['lease_duration']
+        print(f"Updated credentials: {self.credentials}")
+
+    def start_rotation(self, interval=60):
+        # Фоновый поток для проверки и обновления токенов
+        def rotate():
+            while True:
+                if time.time() > self.expiry_time - 300:  # Обновить за 5 минут до истечения токена
+                    self.update_credentials()
+                time.sleep(interval)
+
+        threading.Thread(target=rotate, daemon=True).start()
+
+
+vault_credentials = VaultDBCredentials(
+    vault_url="http://vault-server:8200",
+    role_name="django-app",
+    token="root"  # НЕБЕЗОПАСНЫЙ СПОСОБ ПОЛУЧЕНИЯ ТОКЕНА
+)
+vault_credentials.update_credentials()
+vault_credentials.start_rotation()
+
+DATABASES = {
+    'default': vault_credentials.credentials
+}
+
+"""
+# Для постгреса + vault
+# Получение учетных данных из Vault без проверки на истечение токена и без celery
+
+def get_vault_db_credentials():
+    client = hvac.Client(url=os.getenv("VAULT_ADDR"), token=os.getenv("VAULT_TOKEN"))
+    secret = client.read("database/creds/django-app")
+    return {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "users",
+        "USER": secret["data"]["username"],
+        "PASSWORD": secret["data"]["password"],
+        "HOST": "postgres",  # Имя сервиса PostgreSQL
+        "PORT": 5432,
+    }
+
+DATABASES = {
+    "default": get_vault_db_credentials()
+}
+"""
+# для постгреса без волта
+"""
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -130,11 +204,8 @@ DATABASES = {
         'PORT': 5432,
     }
 }
+"""
 
-'''
-        'HOST': ',#'192.168.1.21',192.168.49.2:30007
-        'PORT': 30007,#5432,
-'''
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
